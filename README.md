@@ -1,5 +1,4 @@
 # NUST Secure Attendance System (NUST-SAS)
-
 A multi-factor attendance verification platform that prevents proxy attendance through biometrics, geolocation, device fingerprinting, and cryptographic assertions.
 
 ## Architecture
@@ -17,6 +16,5 @@ A multi-factor attendance verification platform that prevents proxy attendance t
 - `nust-sas-web/` – Vite + React dashboard for administrators and instructors
 - `migrations/` – PostgreSQL schema for Supabase, including PostGIS setup
 - `reference-docs/` – Project writeups and reports
-## License
 
-MIT
+
