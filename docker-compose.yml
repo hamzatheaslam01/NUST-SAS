@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: nust_sas_postgres
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASS:-postgres_password}
+      - POSTGRES_DB=${DB_NAME:-nust_sas}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/postgres_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-nust_sas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nust_sas_network
+
+  redis:
+    image: redis:alpine
+    container_name: nust_sas_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - nust_sas_network
+
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: nust_sas_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASS:-postgres_password}@postgres:5432/${DB_NAME:-nust_sas}
+      - REDIS_URL=redis://redis:6379/0
+      - QR_SECRET_KEY=${QR_SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - USE_SUPABASE=${USE_SUPABASE:-false}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - nust_sas_network
+
+networks:
+  nust_sas_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
